@@ -1,0 +1,101 @@
+#Orthanc PostgreSQL
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: orthanc-db
+  namespace: orthanc-santiago
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: orthanc-db
+  template:
+    metadata:
+      labels:
+        app: orthanc-db
+    spec:
+      containers:
+      - name: postgres
+        image: postgres:14
+        ports:
+        - containerPort: 5432
+        env:
+        - name: POSTGRES_USER
+          value: "postgres"
+        - name: POSTGRES_PASSWORD
+          valueFrom:
+            secretKeyRef:
+              name: orthanc-secrets
+              key: DB_ORTHANC_PASSWORD
+        volumeMounts:
+        - name: data
+          mountPath: /var/lib/postgresql/data
+      volumes:
+      - name: data
+        persistentVolumeClaim:
+          claimName: orthanc-db-pvc
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: orthanc-db
+  namespace: orthanc-santiago
+spec:
+  type: ClusterIP
+  selector:
+    app: orthanc-db
+  ports:
+  - port: 5432
+    targetPort: 5432
+---
+#Keycloak PostgreSQL
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: keycloak-db
+  namespace: orthanc-santiago
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: keycloak-db
+  template:
+    metadata:
+      labels:
+        app: keycloak-db
+    spec:
+      containers:
+      - name: postgres
+        image: postgres:14
+        ports:
+        - containerPort: 5432
+        env:
+        - name: POSTGRES_USER
+          value: "keycloak"
+        - name: POSTGRES_DB
+          value: "keycloak"
+        - name: POSTGRES_PASSWORD
+          valueFrom:
+            secretKeyRef:
+              name: orthanc-secrets
+              key: DB_KEYCLOAK_PASSWORD
+        volumeMounts:
+        - name: data
+          mountPath: /var/lib/postgresql/data
+      volumes:
+      - name: data
+        persistentVolumeClaim:
+          claimName: keycloak-db-pvc
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: keycloak-db
+  namespace: orthanc-santiago
+spec:
+  type: ClusterIP
+  selector:
+    app: keycloak-db
+  ports:
+  - port: 5432
+    targetPort: 5432
