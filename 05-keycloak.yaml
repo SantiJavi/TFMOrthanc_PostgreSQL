@@ -26,6 +26,11 @@ spec:
         - containerPort: 9000
           name: management
         env:
+        - name: PUBLIC_DOMAIN
+          valueFrom:
+            configMapKeyRef:
+              name: orthanc-config
+              key: PUBLIC_DOMAIN
         - name: KC_BOOTSTRAP_ADMIN_USERNAME
           valueFrom:
             secretKeyRef:
@@ -37,27 +42,48 @@ spec:
               name: orthanc-secrets
               key: KC_ADMIN_PASSWORD
         - name: KC_DB
-          value: "postgres"
+          valueFrom:
+            configMapKeyRef:
+              name: keycloak-config
+              key: KC_DB          
         - name: KC_DB_URL
-          value: "jdbc:postgresql://keycloak-db:5432/keycloak"
+          valueFrom:
+            configMapKeyRef:
+              name: keycloak-config
+              key: KC_DB_URL                            
         - name: KC_DB_USERNAME
-          value: "keycloak"
+          valueFrom:
+            secretKeyRef:
+              name: keycloak-config
+              key: KC_DB_USERNAME
         - name: KC_DB_PASSWORD
           valueFrom:
             secretKeyRef:
               name: orthanc-secrets
               key: DB_KEYCLOAK_PASSWORD
         - name: KC_PROXY_HEADERS
-          value: "xforwarded"
+          valueFrom:
+            configMapKeyRef:
+              name: keycloak-config
+              key: KC_PROXY_HEADERS
         # KC_HOSTNAME incluye la subruta /keycloak para que los redirects sean correctos
         - name: KC_HOSTNAME
-          value: "http://tfm-sch.imaging.i3m.upv.es/keycloak"
+          value: "$(PUBLIC_DOMAIN)/keycloak"
         - name: KC_HOSTNAME_BACKCHANNEL_DYNAMIC
-          value: "true"
+          valueFrom:
+            configMapKeyRef:
+              name: keycloak_config
+              key: KC_HOSTNAME_BACKCHANNEL_DYNAMIC
         - name: KC_HOSTNAME_STRICT
-          value: "false"
+          valueFrom:
+            configMapKeyRef:
+              name: keycloak-config
+              key: KC_HOSTNAME_STRICT          
         - name: KC_HTTP_ENABLED
-          value: "true"
+          valueFrom:
+            configMapKeyRef:
+              name: keycloak-config
+              key: KC_HTTP_ENABLED
         # KC_HTTP_RELATIVE_PATH es build-time en esta imagen — NO se incluye
         readinessProbe:
           httpGet:

@@ -30,6 +30,25 @@ spec:
         volumeMounts:
         - name: data
           mountPath: /var/lib/postgresql/data
+        resources:
+          requests:
+            cpu: "100m"
+            memory: "256Mi"
+          limits:
+            cpu: "500m"
+            memory: "512Mi"
+        readinessProbe:
+          exec:
+            command: ["pg_isready", "-U", "postgres"]
+          initialDelaySeconds: 10
+          periodSeconds: 10
+          timeoutSeconds: 5
+        livenessProbe:
+          exec:
+            command: ["pg_isready", "-U", "postgres"]
+          initialDelaySeconds: 30
+          periodSeconds: 20
+          timeoutSeconds: 5
       volumes:
       - name: data
         persistentVolumeClaim:
@@ -73,7 +92,10 @@ spec:
         - name: POSTGRES_USER
           value: "keycloak"
         - name: POSTGRES_DB
-          value: "keycloak"
+          valueFrom:
+            configMapKeyRef:
+              name: orthanc-config
+              key: KEYCLOAK_DB_NAME                        
         - name: POSTGRES_PASSWORD
           valueFrom:
             secretKeyRef:
@@ -82,6 +104,25 @@ spec:
         volumeMounts:
         - name: data
           mountPath: /var/lib/postgresql/data
+        resources:
+          requests:
+            cpu: "100m"
+            memory: "256Mi"
+          limits:
+            cpu: "500m"
+            memory: "512Mi"
+        readniessProbe:
+          exec:
+            command: ["pg_isready", "-U", "keycloak"]
+          initialDelaySeconds: 10
+          periodSeconds: 10
+          timeoutSeconds: 5
+        livenessProbe:
+          exec:
+            command: ["pg_isready", "-U", "keycloak"]
+          initialDelaySeconds: 30
+          periodSeconds: 20
+          timeoutSeconds: 5
       volumes:
       - name: data
         persistentVolumeClaim:

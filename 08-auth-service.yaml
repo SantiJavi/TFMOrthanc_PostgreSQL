@@ -19,12 +19,20 @@ spec:
         command: ['sh', '-c', 'until nc -z keycloak 8080; do echo waiting for keycloak; sleep 5; done']
       containers:
       - name: orthanc-auth-service
-        image: orthancteam/orthanc-auth-service:main
+        image: orthancteam/orthanc-auth-service:26.2.0
         ports:
         - containerPort: 8000
         env:
+        - name: PUBLIC_DOMAIN
+          valueFrom:
+            configMapKeyRef:
+              name: orthanc-config
+              key: PUBLIC_DOMAIN
         - name: ENABLE_KEYCLOAK
-          value: "true"
+          valueFrom:
+            configMapKeyRef:
+              name: orthanc-auth-config
+              key: ENABLE_KEYCLOAK
         - name: SECRET_KEY
           valueFrom:
             secretKeyRef:
@@ -36,14 +44,17 @@ spec:
               name: orthanc-secrets
               key: KC_CLIENT_SECRET
         - name: PUBLIC_ORTHANC_ROOT
-          value: "http://tfm-sch.imaging.i3m.upv.es/orthanc/"
+          value: "$(PUBLIC_DOMAIN)/orthanc/"
         - name: PUBLIC_LANDING_ROOT
-          value: "http://tfm-sch.imaging.i3m.upv.es/orthanc/ui/app/token-landing.html"
+          value: "$(PUBLIC_DOMAIN)/orthanc/ui/app/token-landing.html"
         - name: PUBLIC_OHIF_ROOT
-          value: "http://tfm-sch.imaging.i3m.upv.es/ohif/"
+          value: "$(PUBLIC_DOMAIN)/ohif/"
         # URL interna del realm para obtener la clave pública
         - name: KEYCLOAK_URI
-          value: "http://keycloak:8080/realms/orthanc"
+          valueFrom:
+            configMapKeyRef:
+              name: orthanc-auth-config
+              key: KEYCLOAK_URI
         - name: USERS
           valueFrom:
             secretKeyRef:
