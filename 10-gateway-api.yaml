@@ -1,0 +1,172 @@
+# ============================================================================
+# Equivalente en Gateway API del fichero 09-ingress.yaml (nginx Ingress)
+# Implementación objetivo: NGINX Gateway Fabric (NGF) 2.6.7
+#
+# Requisitos previos:
+#   1. Instalar las CRDs de Gateway API (standard channel):
+#      kubectl apply -f https://github.com/kubernetes-sigs/gateway-api/releases/download/v1.1.0/standard-install.yaml
+#   2. Instalar NGINX Gateway Fabric (incluye sus propios CRDs:
+#      ClientSettingsPolicy, ProxySettingsPolicy, etc.):
+#      https://docs.nginx.com/nginx-gateway-fabric/install/
+#      El GatewayClass que crea por defecto se llama "nginx".
+#
+# Mapeo de anotaciones originales:
+#   proxy-body-size: "0"        -> ClientSettingsPolicy body.maxSize: "0"
+#   proxy-read-timeout: "600"   -> ProxySettingsPolicy timeout.read: "600s"
+#   proxy-send-timeout: "600"   -> ProxySettingsPolicy timeout.send: "600s"
+#   proxy-buffer-size: "128k"   -> ProxySettingsPolicy buffering.bufferSize (solo keycloak)
+#   rewrite-target: /$2         -> filtro URLRewrite / ReplacePrefixMatch
+#   ssl-redirect: "false"       -> no hace falta nada (no hay listener HTTPS)
+#   use-regex: "true"           -> ya no aplica, los matches son nativos
+# ============================================================================
+
+apiVersion: gateway.networking.k8s.io/v1
+kind: Gateway
+metadata:
+  name: orthanc-gateway
+  namespace: orthanc-santiago
+spec:
+  gatewayClassName: nginx
+  listeners:
+  - name: http
+    protocol: HTTP
+    port: 80
+    hostname: tfm-sch.imaging.i3m.upv.es
+    allowedRoutes:
+      namespaces:
+        from: Same
+
+---
+# Tamaño de body sin límite para TODO lo que cuelgue de este Gateway
+# (equivalente a proxy-body-size: "0" en las 3 anotaciones originales)
+apiVersion: gateway.nginx.org/v1alpha1
+kind: ClientSettingsPolicy
+metadata:
+  name: gateway-client-settings
+  namespace: orthanc-santiago
+spec:
+  targetRef:
+    group: gateway.networking.k8s.io
+    kind: Gateway
+    name: orthanc-gateway
+  body:
+    maxSize: "0"  # "0" desactiva la comprobación de tamaño, igual que en nginx
+
+---
+# Timeouts por defecto para todo el Gateway
+# (equivalente a proxy-read-timeout / proxy-send-timeout: "600")
+apiVersion: gateway.nginx.org/v1alpha1
+kind: ProxySettingsPolicy
+metadata:
+  name: gateway-proxy-settings
+  namespace: orthanc-santiago
+spec:
+  targetRefs:
+  - group: gateway.networking.k8s.io
+    kind: Gateway
+    name: orthanc-gateway
+  timeout:
+    read: "600s"
+    send: "600s"
+
+---
+# /orthanc(/*) -> orthanc-service, quitando el prefijo /orthanc
+apiVersion: gateway.networking.k8s.io/v1
+kind: HTTPRoute
+metadata:
+  name: orthanc-main-route
+  namespace: orthanc-santiago
+spec:
+  parentRefs:
+  - name: orthanc-gateway
+  hostnames:
+  - tfm-sch.imaging.i3m.upv.es
+  rules:
+  - matches:
+    - path:
+        type: PathPrefix
+        value: /orthanc
+    filters:
+    - type: URLRewrite
+      urlRewrite:
+        path:
+          type: ReplacePrefixMatch
+          replacePrefixMatch: /
+    backendRefs:
+    - name: orthanc-service
+      port: 8042
+
+---
+# /keycloak(/*) -> keycloak, quitando el prefijo /keycloak
+apiVersion: gateway.networking.k8s.io/v1
+kind: HTTPRoute
+metadata:
+  name: keycloak-route
+  namespace: orthanc-santiago
+spec:
+  parentRefs:
+  - name: orthanc-gateway
+  hostnames:
+  - tfm-sch.imaging.i3m.upv.es
+  rules:
+  - matches:
+    - path:
+        type: PathPrefix
+        value: /keycloak
+    filters:
+    - type: URLRewrite
+      urlRewrite:
+        path:
+          type: ReplacePrefixMatch
+          replacePrefixMatch: /
+    backendRefs:
+    - name: keycloak
+      port: 8080
+
+---
+# Solo para keycloak: buffer más grande para las respuestas
+# (equivalente a proxy-buffer-size: "128k", que solo estaba en este Ingress)
+apiVersion: gateway.nginx.org/v1alpha1
+kind: ProxySettingsPolicy
+metadata:
+  name: keycloak-proxy-settings
+  namespace: orthanc-santiago
+spec:
+  targetRefs:
+  - group: gateway.networking.k8s.io
+    kind: HTTPRoute
+    name: keycloak-route
+  buffering:
+    bufferSize: "128k"
+    buffers:
+      number: 4
+      size: "128k"
+    busyBuffersSize: "256k"
+
+---
+# /ohif y /dicom-web -> sin rewrite (se conserva el path tal cual)
+apiVersion: gateway.networking.k8s.io/v1
+kind: HTTPRoute
+metadata:
+  name: orthanc-add-route
+  namespace: orthanc-santiago
+spec:
+  parentRefs:
+  - name: orthanc-gateway
+  hostnames:
+  - tfm-sch.imaging.i3m.upv.es
+  rules:
+  - matches:
+    - path:
+        type: PathPrefix   # usa "Exact" si de verdad solo quieres /ohif literal
+        value: /ohif
+    backendRefs:
+    - name: ohif
+      port: 80
+  - matches:
+    - path:
+        type: PathPrefix   # necesario para que funcionen las subrutas de DICOMweb
+        value: /dicom-web
+    backendRefs:
+    - name: orthanc-service
+      port: 8042

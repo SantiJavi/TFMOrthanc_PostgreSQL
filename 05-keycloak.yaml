@@ -53,7 +53,7 @@ spec:
               key: KC_DB_URL                            
         - name: KC_DB_USERNAME
           valueFrom:
-            secretKeyRef:
+            configMapKeyRef:
               name: keycloak-config
               key: KC_DB_USERNAME
         - name: KC_DB_PASSWORD
@@ -66,13 +66,12 @@ spec:
             configMapKeyRef:
               name: keycloak-config
               key: KC_PROXY_HEADERS
-        # KC_HOSTNAME incluye la subruta /keycloak para que los redirects sean correctos
         - name: KC_HOSTNAME
           value: "$(PUBLIC_DOMAIN)/keycloak"
         - name: KC_HOSTNAME_BACKCHANNEL_DYNAMIC
           valueFrom:
             configMapKeyRef:
-              name: keycloak_config
+              name: keycloak-config
               key: KC_HOSTNAME_BACKCHANNEL_DYNAMIC
         - name: KC_HOSTNAME_STRICT
           valueFrom:
@@ -84,7 +83,6 @@ spec:
             configMapKeyRef:
               name: keycloak-config
               key: KC_HTTP_ENABLED
-        # KC_HTTP_RELATIVE_PATH es build-time en esta imagen — NO se incluye
         readinessProbe:
           httpGet:
             path: /health/ready

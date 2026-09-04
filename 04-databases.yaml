@@ -30,13 +30,6 @@ spec:
         volumeMounts:
         - name: data
           mountPath: /var/lib/postgresql/data
-        resources:
-          requests:
-            cpu: "100m"
-            memory: "256Mi"
-          limits:
-            cpu: "500m"
-            memory: "512Mi"
         readinessProbe:
           exec:
             command: ["pg_isready", "-U", "postgres"]
@@ -104,14 +97,7 @@ spec:
         volumeMounts:
         - name: data
           mountPath: /var/lib/postgresql/data
-        resources:
-          requests:
-            cpu: "100m"
-            memory: "256Mi"
-          limits:
-            cpu: "500m"
-            memory: "512Mi"
-        readniessProbe:
+        readinessProbe:
           exec:
             command: ["pg_isready", "-U", "keycloak"]
           initialDelaySeconds: 10

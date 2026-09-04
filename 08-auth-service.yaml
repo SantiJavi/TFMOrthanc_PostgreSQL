@@ -49,7 +49,6 @@ spec:
           value: "$(PUBLIC_DOMAIN)/orthanc/ui/app/token-landing.html"
         - name: PUBLIC_OHIF_ROOT
           value: "$(PUBLIC_DOMAIN)/ohif/"
-        # URL interna del realm para obtener la clave pública
         - name: KEYCLOAK_URI
           valueFrom:
             configMapKeyRef:

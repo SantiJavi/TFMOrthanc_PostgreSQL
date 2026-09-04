@@ -5,7 +5,7 @@ metadata:
   namespace: orthanc-santiago
 data:
   PUBLIC_DOMAIN: "http://tfm-sch.imaging.i3m.upv.es"
-  KEYCLOAL_REAL: "orthanc"
+  KEYCLOAK_REALM: "orthanc"
   KEYCLOAK_CLIENT_ID: "orthanc"
   KEYCLOAK_DB_NAME: "keycloak"
   STONE_WEB_VIEWER_PLUGIN_ENABLED: "true"
